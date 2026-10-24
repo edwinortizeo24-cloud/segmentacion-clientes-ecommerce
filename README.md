@@ -95,6 +95,5 @@ Python, pandas, NumPy, scikit-learn (K-Means, StandardScaler, silhouette), Matpl
 
 ## Autor
 
-Edwin Ortiz, economista y analista de datos.
-LinkedIn: https://www.linkedin.com/in/edwin-ortiz-b1859b255?utm_source=share_via&utm_content=profile&utm_medium]=member_android
-· Edwinortiz.eo24@gmail.com
+**Edwin Ortiz**, economista y analista de datos.
+[LinkedIn](https://www.linkedin.com/in/edwin-ortiz-b1859b255) · [Correo](mailto:Edwinortiz.eo24@gmail.com)
