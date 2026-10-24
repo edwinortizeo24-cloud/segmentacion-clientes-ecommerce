@@ -1,52 +1,99 @@
-# Ecodata: de un export de pedidos a un informe en PDF
+# Segmentación de clientes de e-commerce con RFM y K-Means
 
-Una sola herramienta que hace la cadena completa: **limpia → analiza → grafica → arma el PDF**.
+Proyecto de análisis de datos que segmenta a ~50,000 clientes de una tienda en línea según su recencia, frecuencia y valor monetario (RFM), identifica qué grupos concentran el gasto y propone una estrategia para cada uno.
 
-## Instalar (una vez)
-    pip install -r requirements.txt
+![Peso de cada segmento: clientes vs. gasto histórico](images/segmentos_clientes_vs_gasto.png)
 
-## Usar
-    python ecodata.py pedidos.csv --cliente "Nombre del cliente"
+## Hallazgo principal
 
-Genera `informe_<cliente>.pdf` y un CSV con los datos ya limpios.
+Los dos segmentos de alto valor son aproximadamente la mitad de los clientes, pero concentran **81% del gasto histórico**. El más grande de los dos (**44% del gasto**) es justo el que lleva tiempo sin comprar: clientes valiosos que se están enfriando y que son la prioridad de recuperación.
 
-Opciones:
-- `--salida informe.pdf`: nombre del PDF.
-- `--recomendaciones recs.txt`: tus recomendaciones, una por línea con el formato `Título | detalle`. Reemplazan el borrador automático.
-- `--final`: quita la marca "BORRADOR" (úsalo cuando ya revisaste todo).
-- `--mapeo-columnas`: solo muestra qué columnas detectó, sin generar nada. Úsalo primero con cada cliente nuevo.
+## Objetivo
 
-## Flujo de trabajo recomendado
-1. Corres con `--mapeo-columnas` para ver si reconoció las columnas.
-2. Corres normal y revisas el PDF borrador y el CSV limpio.
-3. Escribes tus recomendaciones en `recs.txt` y corres otra vez, o usas `--final`.
-4. Mandas el PDF por WhatsApp o Instagram.
+Dividir la base de clientes en grupos accionables para decidir dónde conviene invertir en retención, recuperación y crecimiento, y comparar el resultado contra las etiquetas RFM que trae el propio dataset.
 
-## Qué limpia solo
-- Excluye pedidos cancelados, reembolsados o anulados.
-- Quita filas duplicadas exactas.
-- Normaliza códigos postales (quita apóstrofes, espacios y sufijos como `-0000`).
-- Lee fechas mezcladas (`2026-03-14`, `14/03/2026`, con o sin hora).
-- Rellena fecha y zona en las filas de un mismo pedido (Shopify solo las pone en la primera).
-- Quita símbolos de moneda de los precios (`$349.00` → `349`).
-- Descarta filas sin fecha, sin zona o con cantidad o precio inválidos, y lo reporta.
+## Datos
 
-## Qué entrega el PDF
-Resumen, mapa de calor por zona (esquema, no mapa geográfico), categorías por zona,
-margen por categoría (solo si el archivo trae columna de costo), tres zonas principales
-y recomendaciones. Las recomendaciones automáticas son un **borrador basado en reglas**:
-siempre revísalas y ajústalas con tu criterio antes de enviar.
+- **Fuente:** [E-Commerce Customer Segmentation Dataset 2026](https://www.kaggle.com/datasets/datascikhan/e-commerce-customer-segmentation-2026) (Kaggle).
+- **Tamaño:** 50,000 clientes, 53 variables (demografía, compras, canal, satisfacción, valor del cliente).
+- El archivo original no se incluye en este repositorio. Descárgalo desde el enlace de Kaggle.
 
-## Límites que conviene saber
-- **Las columnas están en una lista de nombres posibles** (`ALIASES` al inicio de `ecodata.py`).
-  Los nombres de Shopify están probados con datos de ejemplo; los de Mercado Libre y otros
-  se basan en nombres típicos, pero **verifícalos con un export real** y agrega los que falten.
-- Si dos líneas idénticas de un mismo pedido aparecen en filas separadas, se tratan como duplicado.
-- La zona sale del código postal (o colonia/ciudad si no hay CP). Para un mapa geográfico real
-  haría falta una tabla de CP → coordenadas.
-- El margen solo descuenta el costo del producto, no envíos, comisiones de la plataforma ni impuestos.
-- No es contabilidad ni asesoría fiscal.
+## Metodología
 
-## Datos de ejemplo
-`python generar_datos_ejemplo.py` crea `datos_ejemplo_shopify.csv` (ficticio y desordenado)
-para practicar. `informe_ejemplo.pdf` es el resultado de correrlo.
+1. **Exploración y limpieza**
+   - Sin filas duplicadas.
+   - Se eliminó `dataset_year` (valor constante).
+   - Los vacíos en `loyalty_tier` y `social_media_presence` tienen significado ("sin nivel" y "sin redes"), por lo que se rellenaron en lugar de eliminarse.
+   - Se excluyeron **262 clientes sin compras** (0.5%): tienen gasto cero pero días desde la última compra distintos de cero, una inconsistencia del dataset. Se segmentaron **49,738 clientes**.
+2. **Variables RFM propias**, construidas desde los datos crudos:
+   - Recencia: `days_since_last_purchase`
+   - Frecuencia: `total_purchases`
+   - Monetario: `total_spent_usd`
+3. **Transformaciones según el sesgo de cada variable**
+
+   | Variable | Sesgo original | Transformación | Sesgo final |
+   |---|---|---|---|
+   | Recencia | 1.76 | log(1+x) | -0.03 |
+   | Frecuencia | 0.00 | ninguna | 0.00 |
+   | Monetario | 0.97 | raíz cuadrada | 0.21 |
+
+   El logaritmo se probó también en frecuencia y monetario, pero sobrecorregía (sesgo de -1.46 y -1.06).
+4. **Escalado** con `StandardScaler`, porque K-Means trabaja con distancias.
+5. **Selección de k** con método del codo y silhouette (k de 2 a 10). Se eligió **k = 4** (ver Limitaciones).
+
+## Resultados
+
+| Segmento | % clientes | % gasto histórico | Última compra | Frecuencia (mediana) | Gasto (mediana, USD) | Estrategia |
+|---|---|---|---|---|---|---|
+| **Campeones** | 22.6% | 36.9% | 0 a 14 días | 149 | ~77,600 | Lealtad, acceso anticipado, referidos |
+| **Valiosos en riesgo** | 27.6% | 44.2% | 14 a 365 días (media: 113) | 148 | ~76,400 | Recuperación prioritaria, ofertas personalizadas |
+| **Activos de bajo gasto** | 23.0% | 8.8% | 0 a 14 días | 51 | ~15,500 | Venta cruzada, subir el ticket promedio |
+| **Dormidos de bajo valor** | 26.8% | 10.1% | 14 a 365 días (media: 113) | 49 | ~15,100 | Campañas de bajo costo |
+
+## Comparación con las etiquetas originales del dataset
+
+Los segmentos se contrastaron con la columna `rfm_category` del dataset:
+
+- **Campeones:** 98.6% coincide con la categoría "Champions".
+- **Valiosos en riesgo:** 54.5% aparece como "Champions" y 35.1% como "Loyal" en el dataset; solo 0.5% como "At Risk".
+
+La diferencia se explica por el método. El dataset suma tres puntajes de 1 a 5 y clasifica según el total, de modo que una frecuencia y un monto altos compensan una recencia mala. Además, su puntaje de recencia asigna el máximo a cualquier cliente con compra en los últimos 30 días (~60% de la base). Al tratar la recencia como un eje propio, el clustering detecta clientes valiosos que se están enfriando y que la etiqueta original no marca.
+
+## Limitaciones
+
+- **Datos aparentemente sintéticos.** Casi todas las variables siguen distribuciones parejas entre su mínimo y su máximo, y hay combinaciones poco realistas (por ejemplo, clientes desempleados con ingreso de 150K+). Los resultados demuestran el método más que un hallazgo de negocio real.
+- **Estructura de grupos débil.** El silhouette es bajo en todos los valores de k (entre 0.29 y 0.34; ~0.31 para k = 4) y el codo no tiene una esquina marcada. Elegir k = 4 fue una decisión de interpretabilidad (cuadrícula de recencia por valor), no un descubrimiento de grupos naturales. k = 2 tiene el silhouette más alto, pero solo separa por valor e ignora la recencia.
+- **"Gasto histórico" es acumulado**, no ingreso de un periodo específico.
+- Solo se usaron tres variables RFM; no se incorporaron satisfacción, quejas ni riesgo de fuga.
+
+## Próximos pasos
+
+- Incluir variables de comportamiento (satisfacción, devoluciones, canal) y comparar otros algoritmos (GMM, DBSCAN).
+- Replicar la metodología en datos reales de transacciones, por ejemplo el [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce).
+
+## Estructura del repositorio
+
+```
+├── README.md
+├── requirements.txt
+├── segmentacion_clientes.ipynb      # Análisis completo paso a paso
+├── clientes_segmentados.csv         # Segmento asignado a cada cliente
+└── images/
+    └── segmentos_clientes_vs_gasto.png
+```
+
+## Cómo reproducirlo
+
+1. Descarga el dataset desde Kaggle (viene como `archive.zip`).
+2. Instala las dependencias: `pip install -r requirements.txt`
+3. Abre `segmentacion_clientes.ipynb` (Jupyter o Google Colab) y ajusta la ruta del archivo en la primera celda.
+4. Ejecuta las celdas en orden.
+
+## Herramientas
+
+Python, pandas, NumPy, scikit-learn (K-Means, StandardScaler, silhouette), Matplotlib.
+
+## Autor
+
+**[Tu nombre]**, economista y analista de datos.
+[LinkedIn](https://www.linkedin.com/in/tu-perfil) · [Correo](mailto:tu-correo@ejemplo.com)
