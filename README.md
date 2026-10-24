@@ -2,7 +2,7 @@
 
 Proyecto de análisis de datos que segmenta a ~50,000 clientes de una tienda en línea según su recencia, frecuencia y valor monetario (RFM), identifica qué grupos concentran el gasto y propone una estrategia para cada uno.
 
-![Peso de cada segmento: clientes vs. gasto histórico](images/Segmentos_clientes_vs_gasto.png)
+![Peso de cada segmento: clientes vs. gasto histórico](https://raw.githubusercontent.com/edwinortizeo24-cloud/segmentacion-clientes-ecommerce/main/images/segmentos_clientes_vs_gasto.png)
 
 ## Hallazgo principal
 
