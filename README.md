@@ -2,7 +2,7 @@
 
 Proyecto de análisis de datos que segmenta a ~50,000 clientes de una tienda en línea según su recencia, frecuencia y valor monetario (RFM), identifica qué grupos concentran el gasto y propone una estrategia para cada uno.
 
-![Peso de cada segmento: clientes vs. gasto histórico](images/segmentos_clientes_vs_gasto.png)
+![Peso de cada segmento: clientes vs. gasto histórico](images/Segmentos_clientes_vs_gasto.png)
 
 ## Hallazgo principal
 
@@ -76,7 +76,7 @@ La diferencia se explica por el método. El dataset suma tres puntajes de 1 a 5 
 ```
 ├── README.md
 ├── requirements.txt
-├── segmentacion_clientes.ipynb      # Análisis completo paso a paso
+├── Segmentacion_clientes.ipynb      # Análisis completo paso a paso
 ├── clientes_segmentados.csv         # Segmento asignado a cada cliente
 └── images/
     └── segmentos_clientes_vs_gasto.png
@@ -86,7 +86,7 @@ La diferencia se explica por el método. El dataset suma tres puntajes de 1 a 5 
 
 1. Descarga el dataset desde Kaggle (viene como `archive.zip`).
 2. Instala las dependencias: `pip install -r requirements.txt`
-3. Abre `segmentacion_clientes.ipynb` (Jupyter o Google Colab) y ajusta la ruta del archivo en la primera celda.
+3. Abre `Segmentacion_clientes.ipynb` (Jupyter o Google Colab) y ajusta la ruta del archivo en la primera celda.
 4. Ejecuta las celdas en orden.
 
 ## Herramientas
